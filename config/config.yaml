@@ -1,0 +1,3 @@
+# storage parameter
+ReacherSingle: 'UnityEnvs/Reacher_Linux/Reacher.x86_64'
+Reacher20: 'UnityEnvs/Reacher_Linux_20/Reacher.x86_64'

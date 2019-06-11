@@ -1,8 +1,12 @@
+import yaml
+
 from unityagents import UnityEnvironment
 import numpy as np
 
 def main():
-    env = UnityEnvironment(file_name='Reacher_Linux/Reacher.x86_64')
+    config = load_config_file()
+
+    env = UnityEnvironment(file_name=config['ReacherSingle'])
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
 
@@ -41,6 +45,13 @@ def main():
     print('Total score (averaged over agents) this episode: {}'.format(np.mean(scores)))
 
     env_info = env.reset(train_mode=True)[brain_name]
+
+def load_config_file(config_file: str = 'config/config.yaml'):
+    with open(config_file, 'r') as stream:
+        try:
+            return yaml.load(stream, Loader=yaml.FullLoader)
+        except yaml.YAMLError as ex:
+            print(ex)
 
 if __name__=='__main__':
     main()
