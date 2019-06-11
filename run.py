@@ -6,7 +6,7 @@ import numpy as np
 def main():
     config = load_config_file()
 
-    env = UnityEnvironment(file_name=config['ReacherSingle'])
+    env = UnityEnvironment(file_name=config['Reacher20'])
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
 
@@ -30,7 +30,7 @@ def main():
     env_info = env.reset(train_mode=False)[brain_name]   
     states = env_info.vector_observations
     scores = np.zeros(num_agents)
-    steps = 100
+    steps = 1000
     for t in range(steps):
         actions = np.random.randn(num_agents, action_size)
         actions = np.clip(actions, -1, 1)
