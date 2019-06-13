@@ -3,12 +3,18 @@ import yaml
 from unityagents import UnityEnvironment
 import numpy as np
 
-def main():
-    config = load_config_file()
-    env = UnityEnvironment(file_name=config['Reacher20'])
+from ppo_agent import PPOAgent
+from ppo_model import PPOModel
+from config import Config
 
-    print_env_information(env)
-    run_random_env(env)
+def main():
+    config = Config()
+    config.init_env()
+    print_env_information(config)
+    run_random_env(config)
+
+    agent = PPOAgent(config)
+    train_agent(config, agent)
 
 
 def load_config_file(config_file: str = 'config/config.yaml'):
@@ -19,56 +25,38 @@ def load_config_file(config_file: str = 'config/config.yaml'):
             print(ex)
 
 
-def print_env_information(env):
-    brain_name = env.brain_names[0]
-    brain = env.brains[brain_name]
-
-    # reset the environment
-    env_info = env.reset(train_mode=True)[brain_name]
-
-    # number of agents
+def print_env_information(config):
+    env_info = config.env.reset(train_mode=False)[config.brain_name]
     num_agents = len(env_info.agents)
     print('Number of agents:', num_agents)
-
-    # size of each action
-    action_size = brain.vector_action_space_size
-    print('Size of each action:', action_size)
-
-    # examine the state space
-    states = env_info.vector_observations
-    state_size = states.shape[1]
-    print('There are {} agents. Each observes a state with length: {}'.format(states.shape[0], state_size))
-    print('The state for the first agent looks like:', states[0])
+    print('Size of each action:', config.action_dim)
+    config.states = env_info.vector_observations
+    print('There are {} agents. Each observes a state with length: {}'.format(config.states.shape[0], config.state_dim))
+    print('The state for the first agent looks like:', config.states[0])
 
 
-def run_random_env(env):
-    brain_name = env.brain_names[0]
-    brain = env.brains[brain_name]
-    env_info = env.reset(train_mode=True)[brain_name]
-    action_size = brain.vector_action_space_size
+def run_random_env(config):
+    env_info = config.env.reset(train_mode=False)[config.brain_name]
     num_agents = len(env_info.agents)
-    states = env_info.vector_observations
-    state_size = states.shape[1]
+    config.states = env_info.vector_observations
     scores = np.zeros(num_agents)
     steps = 1000
     for t in range(steps):
-        actions = np.random.randn(num_agents, action_size)
+        actions = np.random.randn(num_agents, config.action_dim)
         actions = np.clip(actions, -1, 1)
-        env_info = env.step(actions)[brain_name]
+        env_info = config.env.step(actions)[config.brain_name]
         next_states = env_info.vector_observations
         rewards = env_info.rewards
         dones = env_info.local_done
         scores += env_info.rewards
-        states = next_states
+        config.states = next_states
         if np.any(dones):
             break
     print('Total score (averaged over agents) this episode: {}'.format(np.mean(scores)))
 
 
-def train_agent(env, agent):
-    brain_name = env.brain_names[0]
-    brain = env.brains[brain_name]
-    env_info = env.reset(train_mode=True)[brain_name]
+def train_agent(config, agent):
+    agent.step()
 
 
 if __name__=='__main__':
