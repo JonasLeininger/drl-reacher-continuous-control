@@ -7,7 +7,7 @@ class Config:
     def __init__(self):
         self.device = torch.device('cpu')
         self.config = self.load_config_file()
-        self.env = UnityEnvironment(file_name=self.config['Reacher20'])
+        self.env = UnityEnvironment(file_name=self.config['ReacherSingle'])
         self.init_env()
 
     def load_config_file(self, config_file: str = 'config/config.yaml'):
@@ -20,7 +20,7 @@ class Config:
     def init_env(self):
         self.brain_name = self.env.brain_names[0]
         self.brain = self.env.brains[self.brain_name]
-        env_info = self.env.reset(train_mode=False)[self.brain_name]
-        states = env_info.vector_observations
-        self.state_dim = states.shape[1]
+        self.env_info = self.env.reset(train_mode=False)[self.brain_name]
+        self.states = self.env_info.vector_observations
+        self.state_dim = self.states.shape[1]
         self.action_dim = self.brain.vector_action_space_size
