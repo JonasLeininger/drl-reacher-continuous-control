@@ -30,7 +30,7 @@ def run_random_env(config):
     env_info = config.env.reset(train_mode=False)[config.brain_name]
     states = env_info.vector_observations
     scores = np.zeros(config.num_agents)
-    steps = 100
+    steps = 10
     for t in range(steps):
         actions = np.random.randn(config.num_agents, config.action_dim)
         actions = np.clip(actions, -1, 1)

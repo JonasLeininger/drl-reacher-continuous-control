@@ -5,8 +5,9 @@ from unityagents import UnityEnvironment
 class Config:
 
     def __init__(self):
-        self.device = torch.device('cpu')
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = self.load_config_file()
+        self.learning_rate = float(self.config['LearningRate'])
         self.env = UnityEnvironment(file_name=self.config['ReacherSingle'])
         self.init_env()
 

@@ -11,18 +11,18 @@ class PPOModel(nn.Module):
         self.fc2 = nn.Linear(hidden_units[0], hidden_units[1])
         self.fc3 = nn.Linear(hidden_units[1], config.action_dim)
         self.std = nn.Parameter(torch.zeros(config.action_dim))
-
-        self.to(config.device)
+        self.device = config.device
+        self.to(self.device)
 
     def forward(self, state, action=None):
-        state = torch.tensor(state)
+        state = torch.tensor(state, dtype=torch.float, device=self.device)
         x = self.fc1(state)
-        x = F.tanh(x)
+        x = torch.tanh(x)
         x = self.fc2(x)
-        x = F.tanh(x)
+        x = torch.tanh(x)
         x = self.fc3(x)
-        mean = F.tanh(x)
-        dist = torch.distributions.normal(mean, F.softplus(self.std))
+        mean = torch.tanh(x)
+        dist = torch.distributions.Normal(mean, F.softplus(self.std))
         if action is None:
             action = dist.sample()
         log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
