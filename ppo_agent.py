@@ -14,13 +14,12 @@ class PPOAgent():
     def step(self):
         env_info = self.config.env.reset(train_mode=True)[self.config.brain_name]
         states = env_info.vector_observations
-        predictions = self.network(states)
-        print(predictions)
-        action = self.act(states)
-        env_info = self.config.env.step(action)[self.config.brain_name]
-        next_states = env_info.vector_observations[0]
-        reward = env_info.rewards[0]
-        done = env_info.local_done[0]
+        predictions = self.act(states)
+        env_info = self.config.env.step(predictions['action'].cpu().numpy())[self.config.brain_name]
+        next_states = env_info.vector_observations
+        print(next_states.shape)
+        rewards = env_info.rewards
+        dones = env_info.local_done
 
     
     def act(self, states):
@@ -28,4 +27,4 @@ class PPOAgent():
         # if np.random.rand() <= self.epsilon:
         #     return np.random.randint(0, self.config.action_dim)
         predictions = self.network(states)
-        return predictions['action'].cpu().numpy()
+        return predictions
