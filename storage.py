@@ -5,7 +5,7 @@ class Storage:
 
     def __init__(self, size):
         self.keys = ['states', 'actions',
-                     'returns', 'values',
+                     'rewards', 'values',
                      'log_pi', 'entropy',
                        'advantage', 'mean']
         self.size = size
@@ -21,3 +21,9 @@ class Storage:
     def reset(self):
         for key in self.keys:
             setattr(self, key, [])
+
+    def placeholder(self):
+        for k in self.keys:
+            v = getattr(self, k)
+            if len(v) == 0:
+                setattr(self, k, [None] * self.size)
