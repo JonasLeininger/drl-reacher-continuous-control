@@ -12,7 +12,7 @@ class PPOAgent():
         self.env_agents = None
         self.epsilon = 1.0
         self.states = None
-        self.storage = Storage(size=501)
+        self.storage = Storage(size=500)
         self.network = PPOModel(config)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
 
@@ -22,7 +22,7 @@ class PPOAgent():
         self.env_agents = self.env_info.agents
         self.states = self.env_info.vector_observations
         self.sample_trajectories()
-
+        self.calculate_returns()
     
     def act(self, states):
         # states = torch.from_numpy(states).float().unsqueeze(0).to(self.network.device)
@@ -46,4 +46,9 @@ class PPOAgent():
         predictions = self.network(self.states)
         self.storage.add(predictions)
         self.storage.placeholder()
-
+        
+    
+    def calculate_returns(self):
+        for t in reversed(range(500)):
+            returns = self.storage.rewards[t]
+            self.storage.returns[t]
