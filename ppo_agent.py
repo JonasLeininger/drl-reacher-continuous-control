@@ -12,6 +12,7 @@ class PPOAgent():
         self.env_agents = None
         self.epsilon = 1.0
         self.states = None
+        self.batch_size = self.config.config.batch_size
         self.storage = Storage(size=500)
         self.network = PPOModel(config)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
@@ -23,6 +24,7 @@ class PPOAgent():
         self.states = self.env_info.vector_observations
         self.sample_trajectories()
         self.calculate_returns()
+        self.train()
     
     def act(self, states):
         # states = torch.from_numpy(states).float().unsqueeze(0).to(self.network.device)
@@ -52,3 +54,8 @@ class PPOAgent():
         for t in reversed(range(500)):
             returns = self.storage.rewards[t]
             self.storage.returns[t]
+    
+    def train(self):
+        agent_count_arr = np.arange(self.states.shape[0])
+        indicies = np.asarray(np.random.permutation(agent_count_arr))
+        batches = indicies[:len(indicies) // self.batch_size * self.batch_size].reshape(-1, self.batch_size)
