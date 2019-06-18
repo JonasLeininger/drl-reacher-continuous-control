@@ -28,7 +28,7 @@ class PPOModel(nn.Module):
         log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
         entropy = dist.entropy().sum(-1).unsqueeze(-1)
 
-        return {'action': action,
+        return {'actions': action,
                 'log_pi': log_prob,
                 'entropy': entropy,
                 'mean': mean}

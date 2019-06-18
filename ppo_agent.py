@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from operator import itemgetter
 
 from ppo_model import PPOModel
 from storage import Storage
@@ -12,7 +13,7 @@ class PPOAgent():
         self.env_agents = None
         self.epsilon = 1.0
         self.states = None
-        self.batch_size = self.config.config.batch_size
+        self.batch_size = self.config.config['BatchesSize']
         self.storage = Storage(size=500)
         self.network = PPOModel(config)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
@@ -36,7 +37,7 @@ class PPOAgent():
     def sample_trajectories(self):
         for t in range(500):
             predictions = self.act(self.states)
-            self.env_info = self.config.env.step(predictions['action'].cpu().numpy())[self.config.brain_name]
+            self.env_info = self.config.env.step(predictions['actions'].cpu().numpy())[self.config.brain_name]
             next_states = self.env_info.vector_observations
             rewards = self.env_info.rewards
             self.storage.add(predictions)
@@ -53,9 +54,17 @@ class PPOAgent():
     def calculate_returns(self):
         for t in reversed(range(500)):
             returns = self.storage.rewards[t]
-            self.storage.returns[t]
+            self.storage.returns[t] = returns
     
     def train(self):
-        agent_count_arr = np.arange(self.states.shape[0])
-        indicies = np.asarray(np.random.permutation(agent_count_arr))
-        batches = indicies[:len(indicies) // self.batch_size * self.batch_size].reshape(-1, self.batch_size)
+        indicies_arr = np.arange(len(self.storage.rewards))
+        batches = np.random.choice(indicies_arr, size=(10, 50), replace=False)
+        actions = torch.cat(self.storage.actions, dim=0)
+        states = torch.tensor(self.storage.states).reshape(shape=(-1, 33))
+        k = itemgetter(batches[0])(states)
+        
+        print(k.shape)
+        k = states[batches[0]]
+        
+        print(k.shape)
+        
