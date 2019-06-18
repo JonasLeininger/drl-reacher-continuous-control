@@ -50,21 +50,33 @@ class PPOAgent():
         self.storage.add(predictions)
         self.storage.placeholder()
         
-    
     def calculate_returns(self):
+        returns = np.zeros(20)
         for t in reversed(range(500)):
-            returns = self.storage.rewards[t]
+            returns += np.asarray(self.storage.rewards[t])
             self.storage.returns[t] = returns
     
     def train(self):
         indicies_arr = np.arange(len(self.storage.rewards))
         batches = np.random.choice(indicies_arr, size=(10, 50), replace=False)
-        actions = torch.cat(self.storage.actions, dim=0)
-        states = torch.tensor(self.storage.states).reshape(shape=(-1, 33))
-        k = itemgetter(batches[0])(states)
-        
-        print(k.shape)
-        k = states[batches[0]]
-        
-        print(k.shape)
-        
+        actions = torch.cat(self.storage.actions, dim=0).detach()
+        log_pi_old = torch.cat(self.storage.log_pi, dim=0).detach()
+        states = torch.tensor(self.storage.states, dtype=torch.float, device=self.network.device).reshape(shape=(-1, 33)).detach()
+        returns = torch.tensor(self.storage.returns, dtype=torch.float, device=self.network.device).reshape(shape=(-1, 1))
+        for batch in range(batches.shape[0]):
+            indicies = batches[batch]
+            sample_actions = actions[indicies]
+            sample_log_pi_old = log_pi_old[indicies]
+            sample_states = states[indicies]
+            sample_returns = returns[indicies]
+
+            prediction = self.network(sample_states, sample_actions)
+            ratio = (prediction['log_pi'] - sample_log_pi_old).exp()
+            ratio_clip = ratio.clamp(1.0 - 0.2, 1.0 + 0.2)
+            policy_loss = - torch.min(ratio * sample_returns, ratio_clip * sample_returns).mean() - \
+                          prediction['entropy'].mean() * 0.01
+
+            self.optimizer.zero_grad()
+            policy_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), 0.5)
+            self.optimizer.step()
