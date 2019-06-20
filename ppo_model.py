@@ -15,7 +15,6 @@ class PPOModel(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action=None):
-        state = torch.tensor(state, dtype=torch.float, device=self.device)
         x = self.fc1(state)
         x = torch.tanh(x)
         x = self.fc2(x)

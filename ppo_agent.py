@@ -36,7 +36,7 @@ class PPOAgent():
 
     def sample_trajectories(self):
         for t in range(500):
-            predictions = self.act(self.states)
+            predictions = self.act(torch.tensor(self.states, dtype=torch.float, device=self.network.device))
             self.env_info = self.config.env.step(predictions['actions'].cpu().numpy())[self.config.brain_name]
             next_states = self.env_info.vector_observations
             rewards = self.env_info.rewards
@@ -46,7 +46,7 @@ class PPOAgent():
                               })
             self.states = next_states
 
-        predictions = self.network(self.states)
+        predictions = self.network(torch.tensor(self.states, dtype=torch.float, device=self.network.device))
         self.storage.add(predictions)
         self.storage.placeholder()
         
