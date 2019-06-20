@@ -17,8 +17,8 @@ class PPOAgent():
         self.storage = Storage(size=500)
         self.network = PPOModel(config)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
-        self.rewards_sum = []
-        self.rewards_mean = []
+        self.scores = []
+        self.scores_agent_mean = []
 
     def step(self):
         self.env_info = self.config.env.reset(train_mode=True)[self.config.brain_name]
@@ -29,6 +29,9 @@ class PPOAgent():
         print(self.storage.returns[0])
         print(self.storage.returns[499])
         self.train()
+        print(self.scores[-1])
+        print(self.scores_agent_mean[-1])
+        self.storage.reset()
     
     def act(self, states):
         # states = torch.from_numpy(states).float().unsqueeze(0).to(self.network.device)
@@ -57,6 +60,8 @@ class PPOAgent():
         self.storage.returns[-1] = np.asarray(self.storage.rewards[-1])
         for t in reversed(range(499)):
             self.storage.returns[t] = self.storage.returns[t+1] + np.asarray(self.storage.rewards[t])
+        self.scores.append(self.storage.returns[0])
+        self.scores_agent_mean.append(np.mean(self.storage.returns[0]))
     
     def train(self):
         indicies_arr = np.arange(len(self.storage.rewards))
