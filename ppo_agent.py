@@ -26,10 +26,7 @@ class PPOAgent():
         self.states = self.env_info.vector_observations
         self.sample_trajectories()
         self.calculate_returns()
-        print(self.storage.returns[0])
-        print(self.storage.returns[499])
         self.train()
-        print(self.scores[-1])
         print(self.scores_agent_mean[-1])
         self.storage.reset()
     
