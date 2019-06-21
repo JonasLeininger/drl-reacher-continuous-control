@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from operator import itemgetter
 
+from base_model import BaseModel
 from ppo_model import PPOModel
 from storage import Storage
 
@@ -14,8 +15,10 @@ class PPOAgent():
         self.epsilon = 1.0
         self.states = None
         self.batch_size = self.config.config['BatchesSize']
-        self.storage = Storage(size=500)
-        self.network = PPOModel(config)
+        self.storage = Storage(size=2048)
+        self.actor_base = BaseModel(config)
+        self.critic_base = BaseModel(config)
+        self.network = PPOModel(config, self.actor_base, self.critic_base)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
         self.scores = []
         self.scores_agent_mean = []
@@ -38,7 +41,7 @@ class PPOAgent():
         return predictions
 
     def sample_trajectories(self):
-        for t in range(500):
+        for t in range(2048):
             predictions = self.act(torch.tensor(self.states, dtype=torch.float, device=self.network.device))
             self.env_info = self.config.env.step(predictions['actions'].cpu().numpy())[self.config.brain_name]
             next_states = self.env_info.vector_observations
@@ -55,14 +58,14 @@ class PPOAgent():
         
     def calculate_returns(self):
         self.storage.returns[-1] = np.asarray(self.storage.rewards[-1])
-        for t in reversed(range(499)):
+        for t in reversed(range(2047)):
             self.storage.returns[t] = self.storage.returns[t+1] + np.asarray(self.storage.rewards[t])
         self.scores.append(self.storage.returns[0])
         self.scores_agent_mean.append(np.mean(self.storage.returns[0]))
     
     def train(self):
         indicies_arr = np.arange(len(self.storage.rewards))
-        batches = np.random.choice(indicies_arr, size=(10, 50), replace=False)
+        batches = np.random.choice(indicies_arr, size=(32, 64), replace=False)
         actions = torch.cat(self.storage.actions, dim=0).detach()
         log_pi_old = torch.cat(self.storage.log_pi, dim=0).detach()
         states = torch.tensor(self.storage.states, dtype=torch.float, device=self.network.device).reshape(shape=(-1, 33)).detach()

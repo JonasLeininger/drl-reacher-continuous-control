@@ -3,24 +3,28 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+from base_model import BaseModel
+
 class PPOModel(nn.Module):
     
-    def __init__(self, config, hidden_units=(64, 64)):
+    def __init__(self, config, actor_body, critic_body, hidden_units=(64, 64)):
         super(PPOModel, self).__init__()
-        self.fc1 = nn.Linear(config.state_dim, hidden_units[0])
-        self.fc2 = nn.Linear(hidden_units[0], hidden_units[1])
-        self.fc3 = nn.Linear(hidden_units[1], config.action_dim)
+        self.actor = actor_body
+        self.critic = critic_body
+        self.actor_action = nn.Linear(hidden_units[0], config.action_dim)
+        self.critic_value = nn.Linear(hidden_units[1], 1)
         self.std = nn.Parameter(torch.zeros(config.action_dim))
         self.device = config.device
         self.to(self.device)
 
     def forward(self, state, action=None):
-        x = self.fc1(state)
-        x = torch.tanh(x)
-        x = self.fc2(x)
-        x = torch.tanh(x)
-        x = self.fc3(x)
+        phiA = self.actor(state)
+        x = self.actor_action(phiA)
         mean = torch.tanh(x)
+
+        phiV = self.critic(state)
+        value = self.critic_value(phiV)
+
         dist = torch.distributions.Normal(mean, F.softplus(self.std))
         if action is None:
             action = dist.sample()
@@ -28,6 +32,7 @@ class PPOModel(nn.Module):
         entropy = dist.entropy().sum(-1).unsqueeze(-1)
 
         return {'actions': action,
+                'values' : value,
                 'log_pi': log_prob,
                 'entropy': entropy,
                 'mean': mean}

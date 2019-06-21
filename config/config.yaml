@@ -3,5 +3,5 @@ ReacherSingle: 'UnityEnvs/Reacher_Linux/Reacher.x86_64'
 Reacher20: 'UnityEnvs/Reacher_Linux_20/Reacher.x86_64'
 
 # training params
-LearningRate: 5e-4
+LearningRate: 3e-4
 BatchesSize: 64
