@@ -7,7 +7,7 @@ class Storage:
         self.keys = ['states', 'actions',
                      'rewards', 'values',
                      'log_pi', 'entropy',
-                       'advantage', 'mean',
+                       'advantages', 'mean',
                        'returns']
         self.size = size
         self.reset()

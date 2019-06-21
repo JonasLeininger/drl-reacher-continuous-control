@@ -30,6 +30,7 @@ class PPOAgent():
         self.sample_trajectories()
         self.calculate_returns()
         self.train()
+        self.scores_agent_mean.append(self.scores[-1].mean())
         print(self.scores_agent_mean[-1])
         self.storage.reset()
     
@@ -47,43 +48,56 @@ class PPOAgent():
             next_states = self.env_info.vector_observations
             rewards = self.env_info.rewards
             self.storage.add(predictions)
-            self.storage.add({'rewards': rewards,
-                              'states': self.states
+            self.storage.add({'rewards': torch.tensor(rewards, dtype=torch.float, device=self.network.device).unsqueeze(-1),
+                              'states': torch.tensor(self.states, dtype=torch.float, device=self.network.device)
                               })
             self.states = next_states
-
+        
         predictions = self.network(torch.tensor(self.states, dtype=torch.float, device=self.network.device))
         self.storage.add(predictions)
         self.storage.placeholder()
         
     def calculate_returns(self):
-        self.storage.returns[-1] = np.asarray(self.storage.rewards[-1])
-        for t in reversed(range(2047)):
-            self.storage.returns[t] = self.storage.returns[t+1] + np.asarray(self.storage.rewards[t])
-        self.scores.append(self.storage.returns[0])
-        self.scores_agent_mean.append(np.mean(self.storage.returns[0]))
+        advantages = torch.tensor(np.zeros((len(self.env_agents), 1)), dtype=torch.float, device=self.network.device)
+        returns = self.storage.values[-1].detach()
+        self.storage.advantages[-1] = advantages.detach()
+        self.storage.returns[-1] = returns
+        scores = torch.tensor(np.zeros((20, 1)), dtype=torch.float, device=self.network.device)
+        for t in reversed(range(2048)):
+            returns = self.storage.rewards[t] + 0.99 * returns
+            td_error = self.storage.rewards[t] + 0.99* self.storage.values[t+1] - self.storage.values[t]
+            advantages = advantages*0.99 + td_error
+            self.storage.advantages[t] = advantages.detach()
+            self.storage.returns[t] = returns.detach()
+            scores = scores + self.storage.rewards[t].detach()
+        self.scores.append(scores.detach().cpu().numpy())
+        
     
     def train(self):
         indicies_arr = np.arange(len(self.storage.rewards))
         batches = np.random.choice(indicies_arr, size=(32, 64), replace=False)
         actions = torch.cat(self.storage.actions, dim=0).detach()
         log_pi_old = torch.cat(self.storage.log_pi, dim=0).detach()
-        states = torch.tensor(self.storage.states, dtype=torch.float, device=self.network.device).reshape(shape=(-1, 33)).detach()
-        returns = torch.tensor(self.storage.returns, dtype=torch.float, device=self.network.device).reshape(shape=(-1, 1))
+        states = torch.cat(self.storage.states ).detach()
+        returns = torch.cat(self.storage.returns).detach()
+        advantages = torch.cat(self.storage.advantages).detach()
         for batch in range(batches.shape[0]):
             indicies = batches[batch]
             sample_actions = actions[indicies]
             sample_log_pi_old = log_pi_old[indicies]
             sample_states = states[indicies]
             sample_returns = returns[indicies]
+            sample_advantages = advantages[indicies]
 
             prediction = self.network(sample_states, sample_actions)
             ratio = (prediction['log_pi'] - sample_log_pi_old).exp()
             ratio_clip = ratio.clamp(1.0 - 0.2, 1.0 + 0.2)
-            policy_loss = - torch.min(ratio * sample_returns, ratio_clip * sample_returns).mean() - \
+            policy_loss = - torch.min(ratio * sample_advantages, ratio_clip * sample_advantages).mean() - \
                           prediction['entropy'].mean() * 0.01
+            
+            value_loss = 0.5 * (sample_returns - prediction['values']).pow(2).mean()
 
             self.optimizer.zero_grad()
-            policy_loss.backward()
+            (policy_loss + value_loss).backward()
             torch.nn.utils.clip_grad_norm_(self.network.parameters(), 0.5)
             self.optimizer.step()
