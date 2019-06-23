@@ -9,8 +9,8 @@ from config import Config
 
 def main():
     config = Config()
-    print_env_information(config)
-    run_random_env(config)
+#     print_env_information(config)
+#     run_random_env(config)
 
     agent = A2CAgent(config)
     train_agent(config, agent)
@@ -48,7 +48,7 @@ def run_random_env(config):
 def train_agent(config, agent):
     for step in range(1000):
         print(step)
-        agent.step()
+        agent.run_agent()
 
 
 if __name__=='__main__':

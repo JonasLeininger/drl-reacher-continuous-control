@@ -73,13 +73,16 @@ class PPOAgent():
     
     def train(self):
         indicies_arr = np.arange(len(self.storage.rewards))
+        print(indicies_arr)
         batches = np.random.choice(indicies_arr, size=(32, 64), replace=False)
+        print(batches.shape)
         actions = torch.cat(self.storage.actions, dim=0).detach()
         log_pi_old = torch.cat(self.storage.log_pi, dim=0).detach()
         states = torch.cat(self.storage.states ).detach()
         returns = torch.cat(self.storage.returns).detach()
         advantages = torch.cat(self.storage.advantages).detach()
         advantages = (advantages - advantages.mean()) / advantages.std()
+        print(advantages.shape)
         for batch in range(batches.shape[0]):
             indicies = batches[batch]
             sample_actions = actions[indicies]

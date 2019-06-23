@@ -12,6 +12,6 @@ class BaseModel(nn.Module):
     
     def forward(self, state):
         x = self.fc1(state)
-        x = torch.tanh(x)
+        x = torch.relu(x)
         x = self.fc2(x)
-        return torch.tanh(x)
+        return torch.relu(x)
