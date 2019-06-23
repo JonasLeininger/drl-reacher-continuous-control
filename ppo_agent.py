@@ -16,8 +16,8 @@ class PPOAgent():
         self.states = None
         self.batch_size = self.config.config['BatchesSize']
         self.storage = Storage(size=2048)
-        self.actor_base = BaseModel(config)
-        self.critic_base = BaseModel(config)
+        self.actor_base = BaseModel(config, hidden_units=(128, 64))
+        self.critic_base = BaseModel(config, hidden_units=(128, 64))
         self.network = PPOModel(config, self.actor_base, self.critic_base)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
         self.scores = []
@@ -29,15 +29,13 @@ class PPOAgent():
         self.states = self.env_info.vector_observations
         self.sample_trajectories()
         self.calculate_returns()
-        self.train()
+        for i in range(10):
+            self.train()
         self.scores_agent_mean.append(self.scores[-1].mean())
         print(self.scores_agent_mean[-1])
         self.storage.reset()
     
     def act(self, states):
-        # states = torch.from_numpy(states).float().unsqueeze(0).to(self.network.device)
-        # if np.random.rand() <= self.epsilon:
-        #     return np.random.randint(0, self.config.action_dim)
         predictions = self.network(states)
         return predictions
 
@@ -64,9 +62,9 @@ class PPOAgent():
         self.storage.returns[-1] = returns
         scores = torch.tensor(np.zeros((20, 1)), dtype=torch.float, device=self.network.device)
         for t in reversed(range(2048)):
-            returns = self.storage.rewards[t] + 0.99 * returns
-            td_error = self.storage.rewards[t] + 0.99* self.storage.values[t+1] - self.storage.values[t]
-            advantages = advantages*0.99 + td_error
+            returns = self.storage.rewards[t] + 0.99  * returns
+            td_error = self.storage.rewards[t] + 0.99 * self.storage.values[t+1] - self.storage.values[t]
+            advantages = advantages * 0.99 * 0.95 + td_error
             self.storage.advantages[t] = advantages.detach()
             self.storage.returns[t] = returns.detach()
             scores = scores + self.storage.rewards[t].detach()
@@ -81,6 +79,7 @@ class PPOAgent():
         states = torch.cat(self.storage.states ).detach()
         returns = torch.cat(self.storage.returns).detach()
         advantages = torch.cat(self.storage.advantages).detach()
+        advantages = (advantages - advantages.mean()) / advantages.std()
         for batch in range(batches.shape[0]):
             indicies = batches[batch]
             sample_actions = actions[indicies]
@@ -92,8 +91,7 @@ class PPOAgent():
             prediction = self.network(sample_states, sample_actions)
             ratio = (prediction['log_pi'] - sample_log_pi_old).exp()
             ratio_clip = ratio.clamp(1.0 - 0.2, 1.0 + 0.2)
-            policy_loss = - torch.min(ratio * sample_advantages, ratio_clip * sample_advantages).mean() - \
-                          prediction['entropy'].mean() * 0.01
+            policy_loss = - torch.min(ratio * sample_advantages, ratio_clip * sample_advantages).mean() #- prediction['entropy'].mean() * 0.01
             
             value_loss = 0.5 * (sample_returns - prediction['values']).pow(2).mean()
 
