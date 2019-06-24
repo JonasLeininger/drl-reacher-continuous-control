@@ -46,9 +46,7 @@ def run_random_env(config):
 
 
 def train_agent(config, agent):
-    for step in range(1000):
-        print(step)
-        agent.run_agent()
+    agent.run_agent()
 
 
 if __name__=='__main__':

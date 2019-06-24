@@ -10,10 +10,13 @@ class A2CAgent():
 
     def __init__(self, config):
         self.config = config
+        self.checkpoint_path = "checkpoints/a2c_simple/cp-{epoch:04d}.pt"
+        self.episodes = 1000
         self.trajectory_length = 100
         self.env_info = None
         self.env_agents = None
         self.states = None
+        self.loss = None
         self.batch_size = self.config.config['BatchesSize']
         self.storage = Storage(size=11)
         self.actor_base = BaseModel(config, hidden_units=(512, 128))
@@ -24,11 +27,26 @@ class A2CAgent():
         self.scores_agent_mean = []
 
     def run_agent(self):
-        self.env_info = self.config.env.reset(train_mode=True)[self.config.brain_name]
-        self.env_agents = self.env_info.agents
-        self.states = self.env_info.vector_observations
-        self.dones = self.env_info.local_done
-        self.sample_trajectories()
+        for step in range(self.episodes):
+            print("Episonde {}/{}".format(step, self.episodes))
+            self.env_info = self.config.env.reset(train_mode=True)[self.config.brain_name]
+            self.env_agents = self.env_info.agents
+            self.states = self.env_info.vector_observations
+            self.dones = self.env_info.local_done
+            self.sample_trajectories()
+            print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
+            if (step+1)%10==0:
+                self.save_checkpoint(step+1)
+                np.save(file="checkpoints/a2c_simple/a2c_simple_save_dump.npy", arr=np.asarray(self.scores))
+            
+            if (step + 1) >= 100:
+                self.mean_of_mean = np.mean(self.scores_agent_mean[-100:])
+                print("Mean of the last 100 episodes: {:.2f}".format(self.mean_of_mean))
+                if self.mean_of_mean>=30.0:
+                    print("Solved the environment after {} episodes with a mean of {:.2f}".format(step, self.mean_of_mean))
+                    np.save(file="checkpoints/a2c_simple/a2c_simple_final.npy", arr=np.asarray(self.scores))
+                    self.save_checkpoint(step+1)
+                    break
     
     def act(self, states):
         predictions = self.network(states)
@@ -94,10 +112,10 @@ class A2CAgent():
                 l_advantages = []
                 l_returns = []
         
+        print("Agent scores:")
         print(scores)
         self.scores.append(scores)
-        self.scores_agent_mean.append(self.scores[-1].mean())
-        print(self.scores_agent_mean[-1])
+        self.scores_agent_mean.append(scores.mean())
 
     def train_model(self, l_predictions, l_advantages, l_returns, l_states):
         # for i in range(5):
@@ -108,7 +126,16 @@ class A2CAgent():
             prob_loss = -(pred['log_pi'] * l_advantages[k]) # mean() or sum() any difference?
             value_loss = 0.5 * (l_returns[k] - pred['values']).pow(2)
 
+            self.loss = (prob_loss + value_loss).mean()
             self.optimizer.zero_grad()
-            (prob_loss + value_loss).mean().backward()
+            self.loss.backward()
             torch.nn.utils.clip_grad_norm_(self.network.parameters(), 0.5)
             self.optimizer.step()
+
+    def save_checkpoint(self, epoch: int):
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'loss': self.loss
+        }, self.checkpoint_path.format(epoch=epoch))
