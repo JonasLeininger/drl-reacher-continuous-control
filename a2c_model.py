@@ -20,7 +20,7 @@ class A2CModel(nn.Module):
     def forward(self, state, action=None):
         phiA = self.actor(state)
         x = self.actor_action(phiA)
-        mean = torch.relu(x)
+        mean = torch.tanh(x)
 
         phiV = self.critic(state)
         value = self.critic_value(phiV)

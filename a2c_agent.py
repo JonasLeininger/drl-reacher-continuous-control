@@ -10,14 +10,14 @@ class A2CAgent():
 
     def __init__(self, config):
         self.config = config
-        self.trajectory_length = 10
+        self.trajectory_length = 100
         self.env_info = None
         self.env_agents = None
         self.states = None
         self.batch_size = self.config.config['BatchesSize']
         self.storage = Storage(size=11)
-        self.actor_base = BaseModel(config, hidden_units=(128, 128))
-        self.critic_base = BaseModel(config, hidden_units=(128, 128))
+        self.actor_base = BaseModel(config, hidden_units=(512, 128))
+        self.critic_base = BaseModel(config, hidden_units=(512, 128))
         self.network = A2CModel(config, self.actor_base, self.critic_base)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
         self.scores = []
@@ -100,12 +100,13 @@ class A2CAgent():
         print(self.scores_agent_mean[-1])
 
     def train_model(self, l_predictions, l_advantages, l_returns, l_states):
+        # for i in range(5):
         for k in range(len(l_returns)):
 
-            # pred = self.network(l_states[k], l_predictions[k]['actions'])
-            pred = l_predictions[k]
+            pred = self.network(l_states[k], l_predictions[k]['actions'])
+            # pred = l_predictions[k]
             prob_loss = -(pred['log_pi'] * l_advantages[k]) # mean() or sum() any difference?
-            value_loss = 0.5 * (l_returns[k] - l_predictions[k]['values']).pow(2)
+            value_loss = 0.5 * (l_returns[k] - pred['values']).pow(2)
 
             self.optimizer.zero_grad()
             (prob_loss + value_loss).mean().backward()
