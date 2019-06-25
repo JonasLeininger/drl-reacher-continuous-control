@@ -60,23 +60,19 @@ class A2CAgent():
         l_rewards = []
         l_predictions = []
         while not np.any(self.dones):
-        # for i in range(20):
 
             n_steps += 1
             predictions = self.act(torch.tensor(self.states, dtype=torch.float, device=self.network.device))
             l_predictions.append(predictions)
-            # print(predictions['actions'])
 
             self.env_info = self.config.env.step(predictions['actions'].detach()
                             .cpu().numpy())[self.config.brain_name]
             next_states = self.env_info.vector_observations
 
             self.dones = self.env_info.local_done
-            # self.dones[0] = True
             l_dones_num.append(torch.from_numpy(np.vstack([done for done in self.dones if done is not None])
                             .astype(np.uint8)).float().to(self.network.device))
             rewards = self.env_info.rewards
-            # print(rewards)
             l_rewards.append(torch.tensor(rewards, dtype=torch.float, device=self.network.device).view(20, 1).detach())
             scores = scores + rewards
             l_states.append(torch.tensor(self.states, dtype=torch.float, device=self.network.device))
