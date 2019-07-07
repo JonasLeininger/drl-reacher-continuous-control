@@ -25,3 +25,6 @@ class Config:
         self.states = self.env_info.vector_observations
         self.state_dim = self.states.shape[1]
         self.action_dim = self.brain.vector_action_space_size
+    
+    def close_env(self):
+        self.env.close()
