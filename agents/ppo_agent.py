@@ -1,8 +1,7 @@
 import torch
 import numpy as np
-from operator import itemgetter
 
-from base_model import BaseModel
+from models.base_model import BaseModel
 from ppo_model import PPOModel
 from storage import Storage
 
