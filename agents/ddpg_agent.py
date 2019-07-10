@@ -2,9 +2,10 @@ import torch
 import numpy as np
 
 from models.base_model import BaseModel
-from models.ddpg_model import DDPGModel
+from models.ddpg_actor import DDPGActor
+from models.ddpg_critic import DDPGCritic
 
-class A2CAgent():
+class DDPGAgent():
 
     def __init__(self, config):
         self.config = config
@@ -16,11 +17,12 @@ class A2CAgent():
         self.states = None
         self.loss = None
         self.batch_size = self.config.config['BatchesSize']
-        self.actor_base = BaseModel(config, hidden_units=(400, 300))
-        self.critic_base = BaseModel(config, hidden_units=(400, 300))
-        self.network = DDPGModel(config, self.actor_base, self.critic_base)
-        self.optimizer_actor = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
-        self.optimizer_critic = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
+        self.actor_local = DDPGActor(config)
+        self.actor_target = DDPGActor(config)
+        self.critic_local = DDPGCritic(config)
+        self.critic_target = DDPGCritic(config)
+        self.optimizer_actor = torch.optim.Adam(self.actor_local.parameters(), lr=self.config.learning_rate)
+        self.optimizer_critic = torch.optim.Adam(self.critic_local.parameters(), lr=self.config.learning_rate)
         self.scores = []
         self.scores_agent_mean = []
 
@@ -31,7 +33,7 @@ class A2CAgent():
             self.env_agents = self.env_info.agents
             self.states = self.env_info.vector_observations
             self.dones = self.env_info.local_done
-            # self.sample_trajectories()
+            self.run_training()
             print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
             if (step+1)%10==0:
                 self.save_checkpoint(step+1)
@@ -45,3 +47,11 @@ class A2CAgent():
                     np.save(file="checkpoints/ddpg/ddpg_final.npy", arr=np.asarray(self.scores))
                     self.save_checkpoint(step+1)
                     break
+
+    def run_training(self):
+        while not np.any(self.dones):
+            action_prediction = self.act(torch.tensor(self.states, dtype=torch.float, device=self.actor_local.device))
+            print(action_prediction.shape)
+
+    def act(self, state_t):
+        return self.actor_local(state_t)

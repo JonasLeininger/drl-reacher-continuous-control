@@ -2,6 +2,7 @@ import numpy as np
 
 from replay_buffer import ReplayBuffer
 from config.config import Config
+from agents.ddpg_agent import DDPGAgent
 
 def main():
     config = Config()
@@ -9,9 +10,11 @@ def main():
     replay = ReplayBuffer(buffer_size, 32)
     print_env_information(config)
     print(config.state_dim)
-    run_random_env(config, replay)
-    states, actions, rewards, nextstates, dones = replay.sample()
-    print(actions.shape)
+    # run_random_env(config, replay)
+    # states, actions, rewards, nextstates, dones = replay.sample()
+    # print(actions.shape)
+    agent = DDPGAgent(config)
+    train_agent(config, agent)
     config.env.close()
 
 
@@ -43,6 +46,9 @@ def run_random_env(config, replay):
         if np.any(dones):
             break
     print('Total score (averaged over agents) this episode: {}'.format(np.mean(scores)))
+
+def train_agent(config, agent):
+    agent.run_agent()
 
 
 if __name__=='__main__':
