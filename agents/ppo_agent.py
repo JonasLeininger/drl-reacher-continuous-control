@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from models.base_model import BaseModel
-from ppo_model import PPOModel
+from models.ppo_model import PPOModel
 from storage import Storage
 
 class PPOAgent():

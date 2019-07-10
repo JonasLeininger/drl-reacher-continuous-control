@@ -1,11 +1,7 @@
-import yaml
-
-from unityagents import UnityEnvironment
 import numpy as np
 
-from ppo_agent import PPOAgent
-from ppo_model import PPOModel
-from config import Config
+from agents.ppo_agent import PPOAgent
+from config.config import Config
 
 def main():
     config = Config()

@@ -1,15 +1,18 @@
 import numpy as np
 
-from agents.a2c_agent import A2CAgent
+from replay_buffer import ReplayBuffer
 from config.config import Config
 
 def main():
     config = Config()
-#     print_env_information(config)
-#     run_random_env(config)
-
-    agent = A2CAgent(config)
-    train_agent(config, agent)
+    buffer_size = int(1e5)
+    replay = ReplayBuffer(buffer_size, 32)
+    print_env_information(config)
+    print(config.state_dim)
+    run_random_env(config, replay)
+    states, actions, rewards, nextstates, dones = replay.sample()
+    print(actions.shape)
+    config.env.close()
 
 
 def print_env_information(config):
@@ -22,11 +25,11 @@ def print_env_information(config):
     print('The state for the first agent looks like:', config.states[0])
 
 
-def run_random_env(config):
+def run_random_env(config, replay):
     env_info = config.env.reset(train_mode=False)[config.brain_name]
     states = env_info.vector_observations
     scores = np.zeros(config.num_agents)
-    steps = 10
+    steps = 1000
     for t in range(steps):
         actions = np.random.randn(config.num_agents, config.action_dim)
         actions = np.clip(actions, -1, 1)
@@ -35,14 +38,11 @@ def run_random_env(config):
         rewards = env_info.rewards
         dones = env_info.local_done
         scores += env_info.rewards
+        replay.add(states, actions, rewards, next_states, dones)
         states = next_states
         if np.any(dones):
             break
     print('Total score (averaged over agents) this episode: {}'.format(np.mean(scores)))
-
-
-def train_agent(config, agent):
-    agent.run_agent()
 
 
 if __name__=='__main__':

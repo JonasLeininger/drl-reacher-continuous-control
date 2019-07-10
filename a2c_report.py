@@ -1,11 +1,10 @@
-import yaml
 import time
 
 import numpy as np
 import torch
 
-from a2c_agent import A2CAgent
-from config import Config
+from agents.a2c_agent import A2CAgent
+from config.config import Config
 
 def main():
     config = Config()

@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 
-from base_model import BaseModel
-from agents.a2c_model import A2CModel
+from models.base_model import BaseModel
+from models.a2c_model import A2CModel
 from storage import Storage
 
 

@@ -1,10 +1,7 @@
-import yaml
-
-from unityagents import UnityEnvironment
 import numpy as np
 
-from a2c_ppo_agent import A2CAgentPPO
-from config import Config
+from agents.a2c_ppo_agent import A2CAgentPPO
+from config.config import Config
 
 def main():
     config = Config()
