@@ -7,7 +7,7 @@ from agents.ddpg_agent import DDPGAgent
 def main():
     config = Config()
     buffer_size = int(1e5)
-    replay = ReplayBuffer(buffer_size, 32)
+    replay = ReplayBuffer(buffer_size, 1)
     print_env_information(config)
     print(config.state_dim)
     # run_random_env(config, replay)

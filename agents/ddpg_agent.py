@@ -34,24 +34,23 @@ class DDPGAgent():
             self.states = self.env_info.vector_observations
             self.dones = self.env_info.local_done
             self.run_training()
-            print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
-            if (step+1)%10==0:
-                self.save_checkpoint(step+1)
-                np.save(file="checkpoints/ddpg/ddpg_save_dump.npy", arr=np.asarray(self.scores))
+            # print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
+            # if (step+1)%10==0:
+            #     self.save_checkpoint(step+1)
+            #     np.save(file="checkpoints/ddpg/ddpg_save_dump.npy", arr=np.asarray(self.scores))
 
-            if (step + 1) >= 100:
-                self.mean_of_mean = np.mean(self.scores_agent_mean[-100:])
-                print("Mean of the last 100 episodes: {:.2f}".format(self.mean_of_mean))
-                if self.mean_of_mean>=30.0:
-                    print("Solved the environment after {} episodes with a mean of {:.2f}".format(step, self.mean_of_mean))
-                    np.save(file="checkpoints/ddpg/ddpg_final.npy", arr=np.asarray(self.scores))
-                    self.save_checkpoint(step+1)
-                    break
+            # if (step + 1) >= 100:
+            #     self.mean_of_mean = np.mean(self.scores_agent_mean[-100:])
+            #     print("Mean of the last 100 episodes: {:.2f}".format(self.mean_of_mean))
+            #     if self.mean_of_mean>=30.0:
+            #         print("Solved the environment after {} episodes with a mean of {:.2f}".format(step, self.mean_of_mean))
+            #         np.save(file="checkpoints/ddpg/ddpg_final.npy", arr=np.asarray(self.scores))
+            #         self.save_checkpoint(step+1)
+            #         break
 
     def run_training(self):
-        while not np.any(self.dones):
-            action_prediction = self.act(torch.tensor(self.states, dtype=torch.float, device=self.actor_local.device))
-            print(action_prediction.shape)
+        # while not np.any(self.dones):
+        action_prediction = self.act(torch.tensor(self.states, dtype=torch.float, device=self.actor_local.device))
 
     def act(self, state_t):
         return self.actor_local(state_t)
