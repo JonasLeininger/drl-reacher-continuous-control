@@ -6,11 +6,11 @@ import torch.nn.functional as F
 
 class DDPGCritic(nn.Module):
 
-    def __init__(self, config, hidden_units=(400, 300)):
+    def __init__(self, config, actions_dim=4, hidden_units=(400, 300)):
         super(DDPGCritic, self).__init__()
         self.fc1 = nn.Linear(config.state_dim, hidden_units[0])
         self.bn1 = nn.BatchNorm1d(hidden_units[0])
-        self.fc2 = nn.Linear(hidden_units[0], hidden_units[1])
+        self.fc2 = nn.Linear(hidden_units[0] + actions_dim, hidden_units[1])
         self.fc3 = nn.Linear(hidden_units[1], 1)
         self.reset_parameters()
         self.device = config.device

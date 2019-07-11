@@ -7,7 +7,6 @@ class Config:
     def __init__(self):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = self.load_config_file()
-        self.learning_rate = float(self.config['LearningRate'])
         self.env = UnityEnvironment(file_name=self.config['Reacher20'])
         self.init_env()
 

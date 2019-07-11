@@ -1,9 +1,12 @@
 import torch
+import torch.nn.functional as F
 import numpy as np
+import random
 
-from models.base_model import BaseModel
 from models.ddpg_actor import DDPGActor
 from models.ddpg_critic import DDPGCritic
+from replay_buffer import ReplayBuffer
+from ornstein_uhlenbeck_noise import Noise
 
 class DDPGAgent():
 
@@ -11,18 +14,28 @@ class DDPGAgent():
         self.config = config
         self.checkpoint_path = "checkpoints/ddpg/cp-{epoch:04d}.pt"
         self.episodes = 1000
-        self.trajectory_length = 100
         self.env_info = None
         self.env_agents = None
         self.states = None
+        self.dones = None
         self.loss = None
-        self.batch_size = self.config.config['BatchesSize']
+        self.gamma = 0.99
+        self.tau = 0.001
+        self.batch_size = self.config.config['BatchesSizeDDPG']
+        self.memory = ReplayBuffer(100000, self.batch_size)
+        self.learn_every = 20
+        self.num_learn = 10
         self.actor_local = DDPGActor(config)
         self.actor_target = DDPGActor(config)
         self.critic_local = DDPGCritic(config)
         self.critic_target = DDPGCritic(config)
-        self.optimizer_actor = torch.optim.Adam(self.actor_local.parameters(), lr=self.config.learning_rate)
-        self.optimizer_critic = torch.optim.Adam(self.critic_local.parameters(), lr=self.config.learning_rate)
+        self.optimizer_actor = torch.optim.Adam(self.actor_local.parameters(),
+                                                lr=float(self.config.config['LearningRateDDPG']))
+        self.optimizer_critic = torch.optim.Adam(self.critic_local.parameters(),
+                                                 lr=float(self.config.config['LearningRateDDPG']),
+                                                 weight_decay=0.0000)
+        self.seed = random.seed(7)
+        self.noise = Noise(4, self.seed)
         self.scores = []
         self.scores_agent_mean = []
 
@@ -34,23 +47,72 @@ class DDPGAgent():
             self.states = self.env_info.vector_observations
             self.dones = self.env_info.local_done
             self.run_training()
-            # print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
-            # if (step+1)%10==0:
-            #     self.save_checkpoint(step+1)
-            #     np.save(file="checkpoints/ddpg/ddpg_save_dump.npy", arr=np.asarray(self.scores))
-
-            # if (step + 1) >= 100:
-            #     self.mean_of_mean = np.mean(self.scores_agent_mean[-100:])
-            #     print("Mean of the last 100 episodes: {:.2f}".format(self.mean_of_mean))
-            #     if self.mean_of_mean>=30.0:
-            #         print("Solved the environment after {} episodes with a mean of {:.2f}".format(step, self.mean_of_mean))
-            #         np.save(file="checkpoints/ddpg/ddpg_final.npy", arr=np.asarray(self.scores))
-            #         self.save_checkpoint(step+1)
-            #         break
+            print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
 
     def run_training(self):
-        # while not np.any(self.dones):
-        action_prediction = self.act(torch.tensor(self.states, dtype=torch.float, device=self.actor_local.device))
+        t_step = 0
+        scores = np.zeros((1, 20))
+        self.noise.reset()
+        while not np.any(self.dones):
+        # for t in range(1000):
+            action_prediction = self.act(self.states)
+            # print(action_prediction)
+            self.env_info = self.config.env.step(action_prediction)[self.config.brain_name]
+            next_states = self.env_info.vector_observations
+            self.dones = self.env_info.local_done
+            # dones_binary = np.vstack([done for done in self.dones if done is not None])
+            rewards = self.env_info.rewards
+            self.memory.add(self.states, action_prediction, rewards, next_states, self.dones)
+            scores = scores + rewards
 
-    def act(self, state_t):
-        return self.actor_local(state_t)
+            if t_step%self.learn_every==0:
+                for _ in range(self.num_learn):
+                    self.learn()
+            self.states = next_states
+            t_step += 1
+
+        print("Agent scores:")
+        print(scores)
+        self.scores.append(scores)
+        self.scores_agent_mean.append(scores.mean())
+
+    def act(self, states, add_noise=True):
+        states = torch.tensor(states, dtype=torch.float, device=self.actor_local.device)
+        self.actor_local.eval()
+        with torch.no_grad():
+            action = self.actor_local(states).cpu().data.numpy()
+        self.actor_local.train()
+        if add_noise:
+            noise = self.noise.sample()
+            # print(noise.shape)
+            # print(action.shape)
+            action += noise
+        return np.clip(action, -1, 1)
+
+    def learn(self):
+        if len(self.memory.memory) > self.batch_size:
+            states, actions, rewards, next_states, dones = self.memory.sample()
+            target_actions = self.actor_target(next_states)
+            q_targets_next = self.critic_target(next_states, target_actions)
+            q_targets = rewards + (self.gamma * q_targets_next * (1- dones))
+            q_expected = self.critic_local(states, actions)
+            critic_loss = F.mse_loss(q_expected, q_targets)
+
+            self.optimizer_critic.zero_grad()
+            critic_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(), 1)
+            self.optimizer_critic.step()
+
+            actions_pred = self.actor_local(states)
+            actor_loss = -self.critic_local(states, actions_pred).mean()
+
+            self.optimizer_actor.zero_grad()
+            actor_loss.backward()
+            self.optimizer_actor.step()
+
+            self.soft_update(self.critic_local, self.critic_target)
+            self.soft_update(self.actor_local, self.actor_target)
+
+    def soft_update(self, local_model, target_model):
+        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+            target_param.data.copy_(self.tau*local_param.data + (1.0-self.tau)*target_param.data)

@@ -2,6 +2,9 @@
 ReacherSingle: 'UnityEnvs/Reacher_Linux/Reacher.x86_64'
 Reacher20: 'UnityEnvs/Reacher_Linux_20/Reacher.x86_64'
 
-# training params
-LearningRate: 1e-4
-BatchesSize: 64
+# training params a2c
+LearningRateA2C: 1e-4
+BatchesSizeA2C: 64
+# training params DDPG
+LearningRateDDPG: 1e-3
+BatchesSizeDDPG: 1024
