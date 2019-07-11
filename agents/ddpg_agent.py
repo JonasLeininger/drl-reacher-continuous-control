@@ -12,7 +12,8 @@ class DDPGAgent():
 
     def __init__(self, config):
         self.config = config
-        self.checkpoint_path = "checkpoints/ddpg/cp-{epoch:04d}.pt"
+        self.checkpoint_path_actor = "checkpoints/ddpg/cp-actor-{epoch:04d}.pt"
+        self.checkpoint_path_critic = "checkpoints/ddpg/cp-critic-{epoch:04d}.pt"
         self.episodes = 1000
         self.env_info = None
         self.env_agents = None
@@ -48,6 +49,18 @@ class DDPGAgent():
             self.dones = self.env_info.local_done
             self.run_training()
             print("Average score from 20 agents: >> {:.2f} <<".format(self.scores_agent_mean[-1]))
+            if (step+1)%10==0:
+                self.save_checkpoint(step+1)
+                np.save(file="checkpoints/ddpg/ddpg_save_dump.npy", arr=np.asarray(self.scores))
+
+            if (step + 1) >= 100:
+                self.mean_of_mean = np.mean(self.scores_agent_mean[-100:])
+                print("Mean of the last 100 episodes: {:.2f}".format(self.mean_of_mean))
+                if self.mean_of_mean>=30.0:
+                    print("Solved the environment after {} episodes with a mean of {:.2f}".format(step, self.mean_of_mean))
+                    np.save(file="checkpoints/ddpg/ddpg_final.npy", arr=np.asarray(self.scores))
+                    self.save_checkpoint(step+1)
+                    break
 
     def run_training(self):
         t_step = 0
@@ -116,3 +129,15 @@ class DDPGAgent():
     def soft_update(self, local_model, target_model):
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(self.tau*local_param.data + (1.0-self.tau)*target_param.data)
+
+    def save_checkpoint(self, epoch: int):
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.actor_target.state_dict(),
+            'optimizer_state_dict': self.optimizer_actor.state_dict()
+        }, self.checkpoint_path_actor.format(epoch=epoch))
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.critic_target.state_dict(),
+            'optimizer_state_dict': self.optimizer_critic.state_dict()
+        }, self.checkpoint_path_critic.format(epoch=epoch))
