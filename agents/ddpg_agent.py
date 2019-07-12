@@ -25,7 +25,7 @@ class DDPGAgent():
         self.batch_size = self.config.config['BatchesSizeDDPG']
         self.memory = ReplayBuffer(100000, self.batch_size)
         self.learn_every = 20
-        self.num_learn = 10
+        self.num_learn = 20
         self.actor_local = DDPGActor(config)
         self.actor_target = DDPGActor(config)
         self.critic_local = DDPGCritic(config)
@@ -35,7 +35,7 @@ class DDPGAgent():
         self.optimizer_critic = torch.optim.Adam(self.critic_local.parameters(),
                                                  lr=float(self.config.config['LearningRateDDPG']),
                                                  weight_decay=0.0000)
-        self.seed = random.seed(7)
+        self.seed = random.seed(16)
         self.noise = Noise(4, self.seed)
         self.scores = []
         self.scores_agent_mean = []
