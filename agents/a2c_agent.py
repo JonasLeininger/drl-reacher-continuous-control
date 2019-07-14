@@ -16,12 +16,13 @@ class A2CAgent():
         self.env_agents = None
         self.states = None
         self.loss = None
-        self.batch_size = self.config.config['BatchesSize']
+        self.batch_size = self.config.config['BatchesSizeA2C']
+        self.learning_rate = float(self.config.config['LearningRateA2C'])
         self.storage = Storage(size=11)
         self.actor_base = BaseModel(config, hidden_units=(512, 128))
         self.critic_base = BaseModel(config, hidden_units=(512, 128))
         self.network = A2CModel(config, self.actor_base, self.critic_base)
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.learning_rate)
         self.scores = []
         self.scores_agent_mean = []
 
