@@ -97,8 +97,6 @@ class DDPGAgent():
         self.actor_local.train()
         if add_noise:
             noise = self.noise.sample()
-            # print(noise.shape)
-            # print(action.shape)
             action += noise
         return np.clip(action, -1, 1)
 
